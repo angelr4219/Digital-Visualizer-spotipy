@@ -1,7 +1,8 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
-
+#access to the Spotify API
+#is able to get the current playing track
 class SpotifyClient:
     def __init__(self):
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
@@ -22,6 +23,7 @@ class SpotifyClient:
             return track_info
         return None
 
+
 if __name__ == "__main__":
     client_id='8459e30ab26b4e60add49be13e82fade'
     client_secret='df71b47380ff4543875f6d42e0b43b83'
@@ -38,8 +40,11 @@ if __name__ == "__main__":
         print(f"Album Art: {current_track['album_art']}")
     else:
         print("No track is currently playing.")
-
-
+  
+  
+  
+  #new class to get the saved tracks of the user2
+'''
 class SpotifyLibrary:
     def __init__(self):
         self.sp = self.sp = spotipy.Spotify(
@@ -59,5 +64,5 @@ class SpotifyLibrary:
 
 # Print saved tracks
 #spotify_library.print_saved_tracks()
-    
- 
+    '''
+  
