@@ -34,7 +34,7 @@ def plot_loudness(AA):
         plt.show()
     else:
         print("No audio analysis found.")
-plot_loudness(audio_analysis)
+
 
 
 # Perform a Fast Fourier Transform (FFT) on the audio signal
@@ -74,7 +74,8 @@ def plot_loudness_and_fft(audio_analysis):
         plt.subplot(2, 1, 2)
         
         plt.plot(freqs, color='r')
-        plt.plot(np.abs(fft_result),color='b')
+        plt.plot(np.abs(fft_result),
+color='b')
         plt.title('Fourier Transform')
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Amplitude')
@@ -85,4 +86,123 @@ def plot_loudness_and_fft(audio_analysis):
     else:
         print("No audio analysis found for the track.")
 
-plot_loudness_and_fft(audio_analysis)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Not fully functional code
+
+def plot_loudness(AA, sample_rate, target_rate):
+    """
+    Plot the loudness over time, with sampling applied.
+
+    Parameters:
+    AA : audio_analysis (dict): Dictionary containing audio analysis data.
+    sample_rate (int): Original sample rate of the audio analysis data.
+    target_rate (int): Target sample rate for sampling.
+    """
+    if audio_analysis:
+        # Extract times and loudness values
+        times = [segment['start'] for segment in audio_analysis['segments']]
+        loudness = [segment['loudness_max'] for segment in audio_analysis['segments']]
+
+        # Convert lists to numpy arrays for processing
+        times = np.array(times)
+        loudness = np.array(loudness)
+
+        # Perform sampling
+        sampled_times = sample_audio_signal(times, sample_rate, target_rate)
+        sampled_loudness = sample_audio_signal(loudness, sample_rate, target_rate)
+
+        # Plotting
+        plt.figure(figsize=(12, 6))
+        plt.plot(sampled_times, sampled_loudness, label='Loudness (Sampled)')
+        plt.title('Loudness Over Time (Sampled)')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Loudness (dB)')
+        plt.grid()
+        plt.legend()
+        plt.show()
+    else:
+        print("No audio analysis found.")
+
+
+def sample_audio_signal(signal, original_rate, target_rate):
+    """
+    Sample the audio signal to a target sample rate.
+
+    Parameters:
+    signal (numpy.array): The audio signal to sample.
+    original_rate (int): The original sample rate of the audio signal.
+    target_rate (int): The target sample rate to downsample or upsample.
+
+    Returns:
+    numpy.array: The resampled audio signal.
+    """
+    if original_rate == target_rate:
+        return signal
+
+    # Calculate the resampling factor
+    factor = target_rate / original_rate
+
+    # Use numpy's array slicing for downsampling or upsampling
+    indices = np.arange(0, len(signal), factor)
+    indices = np.round(indices).astype(int)
+    indices = indices[indices < len(signal)]
+
+    return signal[indices]
+
+# Assuming original sample rate and target rate for demonstration
+original_sample_rate = 1  # 1 sample per second for the example
+target_sample_rate = 1  # Example target rate (adjust as needed)
+
+plot_loudness(audio_analysis, original_sample_rate, target_sample_rate)
+
+def plotfft(audio_analysis):
+    if audio_analysis:
+        # Extract loudness data
+        times = [section['start'] for section in audio_analysis['sections']]
+        loudness = [section['loudness'] for section in audio_analysis['sections']]
+        
+        
+        # Extract audio signal for FFT
+        # Placeholder: Replace with actual audio signal extraction logic
+        audio_signal =sample_audio_signal(loudness)
+        
+        # Perform FFT
+        freqs, fft_result = perform_fft(audio_signal)
+        
+        # Plot FFT
+        plt.subplot(2, 1, 2)
+        
+        plt.plot(freqs, color='r')
+        plt.plot(np.abs(fft_result),
+color='b')
+        plt.title('Fourier Transform')
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Amplitude')
+        plt.grid()
+        
+        plt.tight_layout()
+        plt.show()
+    else:
+        print("No audio analysis found for the track.")
+plotfft(audio_analysis)
