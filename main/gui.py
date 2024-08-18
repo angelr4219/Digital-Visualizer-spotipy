@@ -1,6 +1,6 @@
 import tkinter as tk
-from spotify_integration import SpotifyClient
-from visualizations.py import plot_spectrum
+from spotifyintegration import SpotifyClient
+from visualizer import plot_spectrum
 
 class VisualizerGUI:
     def __init__(self, spotify_client: SpotifyClient):
