@@ -1,5 +1,5 @@
 from spotify_integration import SpotifyClient
-from gui import VisualizerGUI
+from main.gui import VisualizerGUI
 
 def main():
     spotify_client = SpotifyClient()
