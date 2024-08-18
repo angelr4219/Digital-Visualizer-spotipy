@@ -1,8 +1,35 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import matplotlib.pyplot as plt
-#access to the Spotify API
-#is able to get the current playing track
+
+
+'''
+Spotify Integration
+This files contains the SpotifyClient class which is used to interact with the Spotify API. The SpotifyClient class has the following methods:'
+get_current_playing_track: Get the currently playing track
+get_audio_features: Get the audio features of a track
+get_audio_analysis: Get the audio analysis of a track
+The main function demonstrates how to use the SpotifyClient class to get the currently playing track, audio features, and audio analysis of a track.
+
+The SpotifyClient class uses the Spotipy library to interact with the Spotify API. The Spotipy library provides a simple interface for the Spotify Web API.
+
+The SpotifyClient class uses the SpotifyOAuth authentication flow to authenticate with the Spotify API. This flow allows the user to grant permission to the application to access their Spotify account.
+
+The SpotifyClient class is designed to be used in conjunction with the VisualizerGUI class in the gui.py file to create a Spotify visualizer application.
+
+The SpotifyClient class can be used to get information about the currently playing track, such as the track name, artists, album, and album art.
+
+The SpotifyClient class can also be used to get the audio features of a track, such as tempo, key, time signature, and more.
+
+The SpotifyClient class can be used to get the audio analysis of a track, which provides detailed information about the audio content of the track, such as loudness, pitch, and timbre.
+
+The SpotifyClient class is designed to be used in conjunction with the VisualizerGUI class in the gui.py file to create a Spotify visualizer application.
+
+The SpotifyClient class uses the Spotipy library to interact with the Spotify API. The Spotipy library provides a simple interface for the Spotify Web API.
+
+'''
+
+
 class SpotifyClient:
     def __init__(self):
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
@@ -60,28 +87,8 @@ if __name__ == "__main__":
         print("No audio features found.")
     
     audio_analysis = client.get_audio_analysis(current_track['id'])
-def plot_loudness(AA):
-    if audio_analysis:
-        print("Audio Analysis:")
-        times = [segment['start'] for segment in audio_analysis['segments']]
-        loudness = [segment['loudness_max'] for segment in audio_analysis['segments']]
-        plt.figure(figsize=(12, 6))
-        plt.plot(times, loudness, label='Loudness')
-        title  = current_track['name'] 
-        plt.title(title )
-        #plt.title('Loudness Over Time' )
-        plt.xlabel('Time (s)')
-        plt.ylabel('Loudness (dB)')
-        plt.grid()
-        plt.show()
-    else:
-        print("No audio analysis found.")
-plot_loudness(audio_analysis)
-   
   
-  
-  
-  
+
   
   
   #new class to get the saved tracks of the user2
@@ -106,4 +113,6 @@ class SpotifyLibrary:
 # Print saved tracks
 #spotify_library.print_saved_tracks()
     '''
+  
+  
   

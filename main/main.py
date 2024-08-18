@@ -1,4 +1,5 @@
-from spotify_integration import SpotifyClient
+'''
+from spotifyintegration import SpotifyClient
 from main.gui import VisualizerGUI
 
 def main():
@@ -8,3 +9,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''
