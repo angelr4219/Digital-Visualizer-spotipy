@@ -1,6 +1,9 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import matplotlib.pyplot as plt
+import requests
+from io import BytesIO
+from PIL import Image, ImageTk
 
 
 '''
@@ -63,9 +66,12 @@ class SpotifyClient:
     def get_saved_tracks(self):
         results = self.sp.current_user_saved_tracks()
         return results
-    def get_images(self):
-        results = self.sp.thumbnail()
-        return results
+    def get_album_art(self):
+        track_info = self.get_current_playing_track()
+        if track_info:
+            return track_info.get('album_art', None)
+        return None
+
 
 
 if __name__ == "__main__":
@@ -76,6 +82,8 @@ if __name__ == "__main__":
 
     client = SpotifyClient()
     current_track = client.get_current_playing_track()
+    
+    
     
     if current_track:
         print(f"Currently playing: {current_track['name']} by {', '.join(current_track['artists'])}")
@@ -95,32 +103,7 @@ if __name__ == "__main__":
     audio_analysis = client.get_audio_analysis(current_track['id'])
     
     
-  
 
   
   
   #new class to get the saved tracks of the user2
-'''
-class SpotifyLibrary:
-    def __init__(self):
-        self.sp = self.sp = spotipy.Spotify(
-            auth_manager=SpotifyOAuth(
-            client_id='8459e30ab26b4e60add49be13e82fade',
-            client_secret='df71b47380ff4543875f6d42e0b43b83',
-            redirect_uri='http://127.0.0.1:5500',scope="user-library-read"))
-        self.results = self.sp.current_user_saved_tracks()
-    
-    def print_saved_tracks(self):
-        for idx, item in enumerate(self.results['items']):
-            track = item['track']
-            print(idx, track['artists'][0]['name'], " – ", track['name'])
-
-# Create an instance of the SpotifyLibrary class
-#spotify_library = SpotifyLibrary()
-
-# Print saved tracks
-#spotify_library.print_saved_tracks()
-    '''
-  
-  
-  
