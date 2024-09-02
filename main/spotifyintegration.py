@@ -60,6 +60,12 @@ class SpotifyClient:
     def get_audio_analysis(self, track_id):
         audio_analysis = self.sp.audio_analysis(track_id)
         return audio_analysis
+    def get_saved_tracks(self):
+        results = self.sp.current_user_saved_tracks()
+        return results
+    def get_images(self):
+        results = self.sp.thumbnail()
+        return results
 
 
 if __name__ == "__main__":
@@ -87,6 +93,8 @@ if __name__ == "__main__":
         print("No audio features found.")
     
     audio_analysis = client.get_audio_analysis(current_track['id'])
+    
+    
   
 
   
