@@ -1,104 +1,47 @@
-import numpy as np
-import pyaudio
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import numpy as np
 import scipy.fftpack
 from spotifyintegration import SpotifyClient
+import time
 
-"""_summary_
-
-   What i need to do is take a song and create an fft in live time as the song plays, Here is a implementation for recording audio that works. 
-   To DO:
-   I need to basically sample audio from a song, and them perform a fft on that audio. 
-"""
+plt.ion()  # Turn on interactive mode for real-time plotting
 
 
-
-
-
-# Parameters
-CHUNK = 1024  # Number of audio frames per buffer
-FORMAT = pyaudio.paInt16  # Audio format (16-bit PCM)
-CHANNELS = 1  # Number of audio channels
-RATE = 44100  # Sampling rate (samples per second)
-
-# Initialize PyAudio
-p = pyaudio.PyAudio()
-
-# Open stream for playback and recording
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                output=True,
-                frames_per_buffer=CHUNK)
-
-#Initialize Spotify client
-client_id='8459e30ab26b4e60add49be13e82fade'
-client_secret='df71b47380ff4543875f6d42e0b43b83'
-redirect_uri='http://127.0.0.1:5500'
-scope='user-read-playback-state'
+# Extract the audio signal from the audio data
 client = SpotifyClient()
-
-# Get current playing track
 current_track = client.get_current_playing_track()
+spotify_analysis = client.get_audio_analysis(current_track['id'])
 
-c = pyaudio.PyAudio()
-s = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                output=True,
-                frames_per_buffer=CHUNK)
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
-# Placeholder function for audio signal extraction from Spotify
-def extract_audio_signal(audio_data):
-     # Convert the byte buffer to a NumPy array based on audio format
-    if format == pyaudio.paInt16:
-        # Assuming the audio data is in 16-bit PCM format
-        audio_array = np.frombuffer(audio_data, dtype=np.int16)
-    elif format == pyaudio.paFloat32:
-        # Assuming the audio data is in 32-bit float PCM format
-        audio_array = np.frombuffer(audio_data, dtype=np.float32)
-    else:
-        raise ValueError("Unsupported audio format")
-    return audio_array
-
-def perform_fft(signal):
-    fft_result = scipy.fftpack.fft(signal)
-    freqs = scipy.fftpack.fftfreq(len(signal), 1.0 / RATE)
-    return freqs[:len(freqs) // 2], fft_result[:len(fft_result) // 2]
-
-
-
-# Set up the plot
-fig, ax = plt.subplots()
-xdata, ydata = [], []
-line, = ax.plot([], [], lw=2)
-
-def init():
-    ax.set_xlim(0, RATE / 2)
-    ax.set_ylim(0, 1000)
-    return line,
-
-def update(frame):
-    # Read audio data from the stream
-    audio_data = np.frombuffer(stream.read(CHUNK), dtype=np.int16)
+while True:
     
-    # Play the same audio data (placeholder for actual audio streaming from Spotify)
-    stream.write(audio_data.tobytes())
     
-    # Apply FFT
-    freqs, fft_result = perform_fft(audio_data)
-    
-    # Update the plot
-    line.set_data(freqs, np.abs(fft_result))
-    return line,
-
-# Animate the plot
-ani = FuncAnimation(fig, update, init_func=init, blit=True, interval=50)
-
-plt.show()
+    if current_track and spotify_analysis:
+        print(f"Now playing: {current_track['name']} by {current_track['artists'][0]['name']}")
+        
+        audio_data = np.frombuffer(stream.read(CHUNK), dtype=np.float32)
+        analysis_result = analyze_audio(audio_data, spotify_analysis)
+        
+        # Update plots
+        ax1.clear()
+        ax1.plot(analysis_result['freqs'][:len(analysis_result['freqs'])//2], 
+                 analysis_result['fft_result'][:len(analysis_result['fft_result'])//2])
+        ax1.set_title('Real-time FFT')
+        ax1.set_xlabel('Frequency (Hz)')
+        ax1.set_ylabel('Magnitude')
+        
+        ax2.clear()
+        ax2.bar(['Real-time', 'Spotify'], 
+                [analysis_result['real_time_loudness'], analysis_result['spotify_loudness']])
+        ax2.set_title('Loudness Comparison')
+        ax2.set_ylabel('Loudness')
+        
+        plt.tight_layout()
+        plt.draw()
+        plt.pause(10)
+        
+    time.sleep(1)  # Adjust the sleep time based on your needs and API rate limits[2]
 
 # Clean up
 stream.stop_stream()

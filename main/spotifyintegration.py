@@ -39,10 +39,19 @@ class SpotifyClient:
             client_id='8459e30ab26b4e60add49be13e82fade',
             client_secret='df71b47380ff4543875f6d42e0b43b83',
             redirect_uri='http://127.0.0.1:5500',
-            scope='user-read-playback-state')) 
+            scope='user-read-playback-state user-read-recently-played')) 
+       
+        
     #get what is going on in the user's spotify account
-    def get_current_playing_track(self):
+    def got_current_playing_track(self):
         current_playback = self.sp.current_playback()
+        track_info = {
+                'id': 'empty',
+                'name': 'empty',
+                'artists': 'empty',
+                'album': 'empty',
+                'album_art': 'empty'
+            }
         if current_playback and current_playback['is_playing']:
             track = current_playback['item']
             track_info = {
@@ -53,7 +62,21 @@ class SpotifyClient:
                 'album_art': track['album']['images'][0]['url']
             }
             return track_info
-        return None
+        return track_info
+    
+    
+    #get the current playing track. If no track is playing, get the last played track
+    def get_current_playing_track(self):
+        current_playback = self.sp.current_playback()
+        if current_playback and current_playback['is_playing']:
+            track = current_playback['item']
+            print("Currently playing track:")
+            print(self._format_track_info(track, is_playing=True))
+            return self._format_track_info(track, is_playing=True)
+        else:
+            print("No track is currently playing. Fetching last played tracks...")
+            print(self.get_last_played())
+            return self.get_last_played()   
     
     #get the audio features of the track
     def get_audio_features(self, track_id):
@@ -71,28 +94,73 @@ class SpotifyClient:
         if track_info:
             return track_info.get('album_art', None)
         return None
+    def get_last_played(self):
+        
+        # Get the last 2 played tracks
+        
+        recent_tracks = self.sp.current_user_recently_played(limit=1)
+        
+        last_played_tracks = []
+        
+        for item in recent_tracks['items']:
+            track = item['track']
+            track_info = {
+                'name': track['name'],
+                'artists': [artist['name'] for artist in track['artists']],
+                'album': track['album']['name'],
+                
+            }
+            last_played_tracks.append(track_info)
 
+        return last_played_tracks if last_played_tracks else None
+    
+    def _format_track_info(self, track, is_playing):
+        return {
+            'id': track['id'],
+            'name': track['name'],
+            'artists': [artist['name'] for artist in track['artists']],
+            'album': track['album']['name'],
+            'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None,
+            'is_playing': is_playing
+        }
+    def recent_tracks(self, limit=50):
+        # Fetch the most recently played tracks with a limit of 50
+        recent_tracks = self.sp.current_user_recently_played(limit=2)
+        track_list = []
 
+        for item in recent_tracks['items']:
+            track = item['track']
+            track_info = {
+                
+                'name': track['name'],
+                'artists': [artist['name'] for artist in track['artists']],
+                'album': track['album']['name'],
+                'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                'played_at': item['played_at']
+            }
+            track_list.append(track_info)
 
-if __name__ == "__main__":
-    client_id='8459e30ab26b4e60add49be13e82fade'
-    client_secret='df71b47380ff4543875f6d42e0b43b83'
-    redirect_uri='http://127.0.0.1:5500'
-    scope='user-read-playback-state'
+        return track_list
 
-    client = SpotifyClient()
-    current_track = client.get_current_playing_track()
     
     
+print("Spotify Integration")
+client = SpotifyClient()
+
+current_track = client.get_current_playing_track()
+
+
+client_id='8459e30ab26b4e60add49be13e82fade'
+client_secret='df71b47380ff4543875f6d42e0b43b83'
+redirect_uri='http://127.0.0.1:5500'
+scope='user-read-playback-state'
+
+last_played = client.get_last_played()
+
+
     
-    if current_track:
-        print(f"Currently playing: {current_track['name']} by {', '.join(current_track['artists'])}")
-        print(f"Album: {current_track['album']}")
-        print(f"ID: {current_track['id']}")
-        print(f"Album Art: {current_track['album_art']}")
-    else:
-        print("No track is currently playing.")
-   
+        
+'''
     audio_features = client.get_audio_features(current_track['id'])
     if audio_features:
         print("Audio Features:")
@@ -102,8 +170,7 @@ if __name__ == "__main__":
     
     audio_analysis = client.get_audio_analysis(current_track['id'])
     
+'''
     
 
   
-  
-  #new class to get the saved tracks of the user2
