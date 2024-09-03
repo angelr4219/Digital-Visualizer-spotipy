@@ -129,7 +129,7 @@ def create_live_audio_plot(master, spotify_client, figsize=(4, 4), dpi=100):
     def animate(frame):
         nonlocal times, loudness
         current_track = spotify_client.get_current_playing_track()
-        if not current_track:
+        if not current_track or 'progress' not in current_track:
             return line1, line2
 
         audio_analysis = spotify_client.get_audio_analysis(current_track['id'])
@@ -177,7 +177,72 @@ real_time_audio_analysis()
 print ("Real Time Audio Analysis")
 #create_live_audio_plot()
 
+def create_real_time_audio_plot(master, spotify_client, figsize=(8, 8), dpi=100):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+    canvas = FigureCanvasTkAgg(fig, master=master)
+    canvas.draw()
 
+    line1, = ax1.plot([], [], 'b-')
+    line2, = ax2.plot([], [], 'r-')
+
+    ax1.set_title('Loudness Over Time')
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Loudness (dB)')
+    ax1.grid(True)
+
+    ax2.set_title('Fourier Transform')
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Amplitude')
+    ax2.grid(True)
+
+    times = []
+    loudness = []
+
+    def animate(frame):
+        nonlocal times, loudness
+        current_track = spotify_client.get_current_playing_track()
+        if not current_track:
+            return line1, line2
+
+        audio_analysis = spotify_client.get_audio_analysis(current_track['id'])
+        if not audio_analysis:
+            return line1, line2
+
+        # Extract loudness data
+        current_time = current_track['progress'] / 1000  # Convert to seconds
+        current_loudness = next((segment['loudness_max'] for segment in audio_analysis['segments'] 
+                                 if segment['start'] <= current_time < segment['start'] + segment['duration']), 
+                                None)
+
+        if current_loudness is not None:
+            times.append(current_time)
+            loudness.append(current_loudness)
+
+            # Keep only the last 60 seconds of data
+            if len(times) > 60:
+                times = times[-60:]
+                loudness = loudness[-60:]
+
+            line1.set_data(times, loudness)
+            ax1.relim()
+            ax1.autoscale_view()
+
+        # Perform FFT
+        if len(loudness) > 1:
+            fft_result = np.fft.fft(loudness)
+            fft_freqs = np.fft.fftfreq(len(loudness), d=1)
+            fft_magnitudes = np.abs(fft_result)
+
+            positive_freq_idxs = fft_freqs > 0
+            line2.set_data(fft_freqs[positive_freq_idxs], fft_magnitudes[positive_freq_idxs])
+            ax2.relim()
+            ax2.autoscale_view()
+
+        ax1.set_title(f"Loudness Over Time - {current_track['name']}")
+        return line1, line2
+
+    anim = FuncAnimation(fig, animate, frames=None, interval=1000, blit=True)
+    return canvas, anim
 
 
 

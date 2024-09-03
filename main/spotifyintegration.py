@@ -118,6 +118,7 @@ class SpotifyClient:
             }
             track_list.append(track_info)
         return track_list
+    
     def get_current_playback_info(self):
         current_playback = self.sp.current_playback()
         if current_playback and current_playback['is_playing']:
@@ -132,6 +133,7 @@ class SpotifyClient:
                 'album': track['album']['name'],
                 'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None,
                 'is_playing': True,
+                'progress': progress_ms,
                 'progress': progress_ms,
                 'duration': duration_ms,
                 'progress_formatted': f"{progress_ms // 60000}:{(progress_ms % 60000) // 1000:02d}",

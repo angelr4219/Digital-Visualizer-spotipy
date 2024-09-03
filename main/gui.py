@@ -6,6 +6,7 @@ from io import BytesIO
 import webbrowser
 from spotifyintegration import SpotifyClient
 from AudioProcessing import create_live_audio_plot
+from AudioProcessing import create_real_time_audio_plot
 import numpy as np
 
 # Initialize Spotify client
@@ -16,6 +17,7 @@ class VisualizerGUI:
     def __init__(self, spotify_client: SpotifyClient):
         self.spotify_client = spotify_client
         self.current_album_art_url = None
+        self.analysis_running = False  
 
         # Initialize the main window
         self.root = tk.Tk()
@@ -43,10 +45,13 @@ class VisualizerGUI:
         self.display_track_info()
         self.update_track_info_periodically()
         self.update_album_art()
-
-        self.analysis_running = False
+        
+        
         self.plot_canvas = None
         self.plot_animation = None
+        self.toggle_analysis()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
 
     def toggle_analysis(self):
         if self.analysis_running:
@@ -56,19 +61,25 @@ class VisualizerGUI:
 
     def start_analysis(self):
         if not self.analysis_running:
-            # Pass the correct arguments to create_live_audio_plot
-            self.plot_canvas, self.plot_animation = create_live_audio_plot(self.plot_frame, self.spotify_client, figsize=(4, 4), dpi=100)
-            self.plot_canvas.get_tk_widget().pack(fill='both', expand=True)
-            self.analysis_running = True
-            self.analysis_button.config(text="Stop Live Analysis")
+            try:
+                self.plot_canvas, self.plot_animation = create_live_audio_plot(self.plot_frame, self.spotify_client, figsize=(4, 4), dpi=100)
+                self.plot_canvas.get_tk_widget().pack(fill='both', expand=True)
+                self.analysis_running = True
+                self.analysis_button.config(text="Stop Live Analysis")
+            except Exception as e:
+                print(f"Error starting analysis: {e}")
+                self.analysis_running = False
 
     def stop_analysis(self):
         if self.analysis_running:
-            self.plot_animation.event_source.stop()
-            self.plot_canvas.get_tk_widget().pack_forget()
+            self.stop_animation()
+            if self.plot_canvas:
+                self.plot_canvas.get_tk_widget().pack_forget()
             self.analysis_running = False
+            self.plot_canvas = None
+            self.plot_animation = None
             self.analysis_button.config(text="Start Live Analysis")
-
+            
     def run(self):
         self.root.mainloop()
 
@@ -135,7 +146,16 @@ class VisualizerGUI:
 
     def update_track_info_periodically(self):
         self.display_track_info()  # Update track info
+        if self.analysis_running and self.plot_animation:
+            self.plot_animation.event_source.start()  # Ensure animation is 
         self.root.after(5000, self.update_track_info_periodically)  # Refresh every 5 seconds
+    def on_closing(self):
+        self.stop_animation()
+        self.root.quit()
+        self.root.destroy()
+    def stop_animation(self):
+        if hasattr(self, 'plot_animation') and self.plot_animation is not None:
+            self.plot_animation.event_source.stop()
 
 
 gui = VisualizerGUI(client)
