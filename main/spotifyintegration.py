@@ -41,29 +41,6 @@ class SpotifyClient:
             redirect_uri='http://127.0.0.1:5500',
             scope='user-read-playback-state user-read-recently-played')) 
        
-        
-    #get what is going on in the user's spotify account
-    def got_current_playing_track(self):
-        current_playback = self.sp.current_playback()
-        track_info = {
-                'id': 'empty',
-                'name': 'empty',
-                'artists': 'empty',
-                'album': 'empty',
-                'album_art': 'empty'
-            }
-        if current_playback and current_playback['is_playing']:
-            track = current_playback['item']
-            track_info = {
-                'id': track['id'],
-                'name': track['name'],
-                'artists': [artist['name'] for artist in track['artists']],
-                'album': track['album']['name'],
-                'album_art': track['album']['images'][0]['url']
-            }
-            return track_info
-        return track_info
-    
     
     #get the current playing track. If no track is playing, get the last played track
     def get_current_playing_track(self):
@@ -105,10 +82,11 @@ class SpotifyClient:
         for item in recent_tracks['items']:
             track = item['track']
             track_info = {
+                'id': track['id'],
                 'name': track['name'],
                 'artists': [artist['name'] for artist in track['artists']],
                 'album': track['album']['name'],
-                
+                'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None
             }
             last_played_tracks.append(track_info)
 
@@ -139,8 +117,32 @@ class SpotifyClient:
                 'played_at': item['played_at']
             }
             track_list.append(track_info)
-
         return track_list
+    def get_current_playback_info(self):
+        current_playback = self.sp.current_playback()
+        if current_playback and current_playback['is_playing']:
+            track = current_playback['item']
+            progress_ms = current_playback['progress_ms']
+            duration_ms = track['duration_ms']
+            
+            return {
+                'id': track['id'],
+                'name': track['name'],
+                'artists': [artist['name'] for artist in track['artists']],
+                'album': track['album']['name'],
+                'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                'is_playing': True,
+                'progress': progress_ms,
+                'duration': duration_ms,
+                'progress_formatted': f"{progress_ms // 60000}:{(progress_ms % 60000) // 1000:02d}",
+                'duration_formatted': f"{duration_ms // 60000}:{(duration_ms % 60000) // 1000:02d}",
+                'progress_percent': (progress_ms / duration_ms) * 100
+            }
+        else:
+            return None
+
+    def get_audio_analysis(self, track_id):
+        return self.sp.audio_analysis(track_id)
 
     
     
@@ -156,6 +158,8 @@ redirect_uri='http://127.0.0.1:5500'
 scope='user-read-playback-state'
 
 last_played = client.get_last_played()
+now = client.get_current_playback_info()
+print (now)
 
 
     

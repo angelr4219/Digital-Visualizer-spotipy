@@ -2,7 +2,11 @@ import numpy as np
 import scipy.fftpack
 import matplotlib.pyplot as plt
 from spotifyintegration import SpotifyClient
+from matplotlib.animation import FuncAnimation
+import matplotlib.animation as animation
 import time
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 
 '''
@@ -18,134 +22,160 @@ client = SpotifyClient()
 current_track = client.get_current_playing_track()
 audio_analysis = client.get_audio_analysis(current_track['id'])
 
-# Plot the loudness of the audio signal over time
-def plot_loudness(AA):
-    if audio_analysis:
-        print("Audio Analysis:")
-        times = [segment['start'] for segment in audio_analysis['segments']]
-        loudness = [segment['loudness_max'] for segment in audio_analysis['segments']]
-        plt.figure(figsize=(12, 6))
-        plt.plot(times, loudness, label='Loudness')
-        title  = current_track['name'] 
-        plt.title(title )
-        #plt.title('Loudness Over Time' )
-        plt.xlabel('Time (s)')
-        plt.ylabel('Loudness (dB)')
-        plt.grid()
-        plt.show()
-    else:
-        print("No audio analysis found.")
-
-
-
-# Perform a Fast Fourier Transform (FFT) on the audio signal
-def extract_audio_signal(audio_data):
-    # Placeholder function to extract audio signal
-    return np.array(audio_data)
-
-# Perform a Fast Fourier Transform (FFT) on the audio signal
-def perform_fft(signal):
-    fft_result = scipy.fftpack.fft(signal)
-    freqs = scipy.fftpack.fftfreq(len(signal))
-    return freqs, fft_result
-
-def plot_loudness_and_fft(audio_analysis):
-    if audio_analysis:
-        # Extract loudness data
-        times = [section['start'] for section in audio_analysis['sections']]
-        loudness = [section['loudness'] for section in audio_analysis['sections']]
-        
-        # Plot loudness
-        plt.figure(figsize=(12, 6))
-        plt.subplot(2, 1, 1)
-        plt.plot(times, loudness, marker='o', linestyle='-', color='b')
-        plt.title('Loudness Over Time')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Loudness (dB)')
-        plt.grid()
-        
-        # Extract audio signal for FFT
-        # Placeholder: Replace with actual audio signal extraction logic
-        audio_signal = extract_audio_signal(loudness)
-        
-        # Perform FFT
-        freqs, fft_result = perform_fft(audio_signal)
-        
-        # Plot FFT
-        plt.subplot(2, 1, 2)
-        
-        plt.plot(freqs, color='r')
-        plt.plot(np.abs(fft_result),
-color='b')
-        plt.title('Fourier Transform')
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude')
-        plt.grid()
-        
-        plt.tight_layout()
-        plt.show()
-    else:
-        print("No audio analysis found for the track.")
-
-
-
-
-
-def real_time_audio_analysis(update_interval=1):
+def real_time_audio_analysis(update_interval=1000):  # update_interval in milliseconds
     client = SpotifyClient()
-    plt.ion()  # Turn on interactive mode for real-time plotting
+    
+    # Set up the plot
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
     
-    while True:
-        current_track = client.get_current_playing_track()
-        if not current_track:
-            print("No track is currently playing.")
-            time.sleep(update_interval)
-            continue
+    # Initialize empty data
+    times = []
+    loudness = []
+    
+    # Initialize plot lines
+    line1, = ax1.plot([], [], 'b-', label='Loudness')
+    line2, = ax2.plot([], [], 'r-', label='FFT')
+    
+    # Set up plot labels and titles
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Loudness (dB)')
+    ax1.set_title('Loudness Over Time')
+    ax1.grid(True)
+    ax1.legend()
+    
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Magnitude')
+    ax2.set_title('Real-time Fourier Transform')
+    ax2.grid(True)
+    ax2.legend()
+    
+    def update_plot(frame):
+        nonlocal times, loudness
         
-        audio_analysis = client.get_audio_analysis(current_track['id'])
+        # Get current playback info
+        playback_info = client.get_current_playback_info()
+        if not playback_info:
+            return line1, line2
+        
+        # Get audio analysis for the current track
+        audio_analysis = client.get_audio_analysis(playback_info['id'])
         if not audio_analysis:
-            print("No audio analysis available for the current track.")
-            time.sleep(update_interval)
-            continue
+            return line1, line2
         
-        # Extract loudness data
-        times = [segment['start'] for segment in audio_analysis['segments']]
-        loudness = [segment['loudness_max'] for segment in audio_analysis['segments']]
+        # Update loudness data
+        current_time = playback_info['progress'] / 1000  # Convert to seconds
+        current_loudness = next((segment['loudness_max'] for segment in audio_analysis['segments'] 
+                                 if segment['start'] <= current_time < segment['start'] + segment['duration']), 
+                                None)
         
-        # Plot loudness
-        ax1.clear()
-        ax1.plot(times, loudness, label='Loudness')
-        ax1.set_title(f"Loudness Over Time - {current_track['name']}")
-        ax1.set_xlabel('Time (s)')
-        ax1.set_ylabel('Loudness (dB)')
-        ax1.grid(True)
-        ax1.legend()
+        if current_loudness is not None:
+            times.append(current_time)
+            loudness.append(current_loudness)
+            
+            # Keep only the last 60 seconds of data
+            if len(times) > 60:
+                times = times[-60:]
+                loudness = loudness[-60:]
+            
+            line1.set_data(times, loudness)
+            ax1.relim()
+            ax1.autoscale_view()
+            
+            # Update track info in title
+            ax1.set_title(f"Loudness Over Time - {playback_info['name']} by {', '.join(playback_info['artists'])}")
         
-        # Perform FFT
-        audio_signal = np.array(loudness)  # Using loudness as a proxy for audio signal
-        freqs, fft_result = perform_fft(audio_signal)
+        # Perform FFT on the recent loudness data
+        if len(loudness) > 1:
+            fft_result = np.fft.fft(loudness)
+            fft_freqs = np.fft.fftfreq(len(loudness), d=1)  # Assuming 1 second intervals
+            fft_magnitudes = np.abs(fft_result)
+            
+            # Plot only the positive frequencies
+            positive_freq_idxs = fft_freqs > 0
+            line2.set_data(fft_freqs[positive_freq_idxs], fft_magnitudes[positive_freq_idxs])
+            ax2.relim()
+            ax2.autoscale_view()
         
-        # Plot FFT
-        ax2.clear()
-        ax2.plot(freqs, np.abs(fft_result), color='b')
-        ax2.set_title('Fourier Transform')
-        ax2.set_xlabel('Frequency (Hz)')
-        ax2.set_ylabel('Amplitude')
-        ax2.grid(True)
-        
-        plt.tight_layout()
-        plt.draw()
-        plt.pause(update_interval)
+        return line1, line2
+    
+    # Set up the animation
+    anim = FuncAnimation(fig, update_plot, frames=np.arange(0, 100), interval=update_interval, blit=True)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    
+def create_live_audio_plot(master, spotify_client, figsize=(4, 4), dpi=100):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+    canvas = FigureCanvasTkAgg(fig, master=master)
+    canvas.draw()
 
-def perform_fft(signal):
-    fft_result = scipy.fftpack.fft(signal)
-    freqs = scipy.fftpack.fftfreq(len(signal))
-    return freqs, fft_result
+    ax1.set_title('Loudness Over Time')
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Loudness (dB)')
+    ax1.grid(True)
+
+    ax2.set_title('Fourier Transform')
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Amplitude')
+    ax2.grid(True)
+
+    line1, = ax1.plot([], [], 'b-')
+    line2, = ax2.plot([], [], 'r-')
+
+    times = []
+    loudness = []
+
+    def animate(frame):
+        nonlocal times, loudness
+        current_track = spotify_client.get_current_playing_track()
+        if not current_track:
+            return line1, line2
+
+        audio_analysis = spotify_client.get_audio_analysis(current_track['id'])
+        if not audio_analysis:
+            return line1, line2
+
+        # Update loudness data
+        current_time = current_track['progress'] / 1000  # Convert to seconds
+        current_loudness = next((segment['loudness_max'] for segment in audio_analysis['segments'] 
+                                 if segment['start'] <= current_time < segment['start'] + segment['duration']), 
+                                None)
+
+        if current_loudness is not None:
+            times.append(current_time)
+            loudness.append(current_loudness)
+
+            # Keep only the last 60 seconds of data
+            if len(times) > 60:
+                times = times[-60:]
+                loudness = loudness[-60:]
+
+            line1.set_data(times, loudness)
+            ax1.relim()
+            ax1.autoscale_view()
+
+        # Perform FFT
+        if len(loudness) > 1:
+            fft_result = np.fft.fft(loudness)
+            fft_freqs = np.fft.fftfreq(len(loudness), d=1)
+            fft_magnitudes = np.abs(fft_result)
+
+            positive_freq_idxs = fft_freqs > 0
+            line2.set_data(fft_freqs[positive_freq_idxs], fft_magnitudes[positive_freq_idxs])
+            ax2.relim()
+            ax2.autoscale_view()
+
+        return line1, line2
+
+    anim = animation.FuncAnimation(fig, animate, frames=None, interval=1000, blit=True)
+    return canvas, anim
+
 
 # Run the real-time analysis
 real_time_audio_analysis()
 print ("Real Time Audio Analysis")
+#create_live_audio_plot()
 
 
 
@@ -162,8 +192,7 @@ print ("Real Time Audio Analysis")
 
 
 
-
-#Not fully functional code
+'''#Not fully functional code
 
 def plot_loudness(AA, sample_rate, target_rate):
     """
@@ -261,3 +290,4 @@ color='b')
     else:
         print("No audio analysis found for the track.")
 #plotfft(audio_analysis)
+# '''
